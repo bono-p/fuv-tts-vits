@@ -1,0 +1,50 @@
+{
+  "project_name": "tts-fuv-voice",
+
+  "model_name_or_path": "bonopassale/mms-tts-ful-with-discriminator",
+  "output_dir": "/content/drive/MyDrive/fuv-stt-dataset/tts-fuv-voice",
+  "hub_model_id": "bonopassale/tts-fuv-voice",
+  "push_to_hub": true,
+  "overwrite_output_dir": true,
+
+  "dataset_name": "bonopassale/fuv-tts-monospeaker",
+  "dataset_config_name": "default",
+  "train_split_name": "train",
+  "eval_split_name": "train",
+  "full_generation_sample_text": "Jam waali",
+
+  "audio_column_name": "audio",
+  "text_column_name": "text",
+
+  "max_duration_in_seconds": 20,
+  "min_duration_in_seconds": 0.5,
+  "max_tokens_length": 500,
+
+  "do_train": true,
+  "num_train_epochs": 200,
+  "gradient_accumulation_steps": 1,
+  "per_device_train_batch_size": 16,
+  "per_device_eval_batch_size": 16,
+
+  "learning_rate": 2e-5,
+  "adam_beta1": 0.8,
+  "adam_beta2": 0.99,
+  "warmup_ratio": 0.01,
+  "group_by_length": false,
+
+  "do_eval": true,
+  "eval_steps": 50,
+  "save_steps": 50,
+  "save_total_limit": 2,
+  "logging_steps": 10,
+
+  "weight_disc": 3,
+  "weight_fmaps": 1,
+  "weight_gen": 1,
+  "weight_kl": 1.5,
+  "weight_duration": 1,
+  "weight_mel": 35,
+
+  "fp16": true,
+  "seed": 42
+}
