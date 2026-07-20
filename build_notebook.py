@@ -45,12 +45,29 @@ cells.append(nbf.v4.new_code_cell(
 %cd /content/finetune-hf-vits
 !pip install -r requirements.txt --quiet
 
+# finetune-hf-vits accede directement a config.pad_token_id, une API cassee
+# par les versions recentes de Transformers (5.x). On force une version
+# compatible, en ecrasant explicitement celle installee juste au-dessus.
+!pip install "transformers==4.46.3" --force-reinstall --quiet
+
+# Verification : la ligne suivante DOIT afficher une version 4.x.
+# Si ce n'est pas le cas, ne continue pas plus loin, redemarre la session
+# et relance cette cellule en premier avant toute autre.
+!python -c "import transformers; print('Version Transformers active :', transformers.__version__)"
+
 # Construction de l'extension Cython pour l'alignement monotone (obligatoire,
 # la version Python pure est beaucoup trop lente)
 %cd monotonic_align
 !mkdir -p monotonic_align
 !python setup.py build_ext --inplace
 %cd .."""
+))
+
+cells.append(nbf.v4.new_markdown_cell(
+"**Important** : redemarre la session maintenant "
+"(Execution -> Redemarrer la session), puis relance uniquement cette "
+"cellule d'installation avant de continuer. Sans redemarrage, l'ancienne "
+"version de Transformers reste chargee en memoire malgre la reinstallation."
 ))
 
 cells.append(nbf.v4.new_markdown_cell(
@@ -91,10 +108,42 @@ cells.append(nbf.v4.new_markdown_cell(
 ))
 cells.append(nbf.v4.new_code_cell(
 """%cd /content/finetune-hf-vits
-!python convert_original_discriminator_checkpoint.py \\\\
-    --language_code ful \\\\
-    --pytorch_dump_folder_path /content/mms-tts-ful-with-discriminator \\\\
+!python convert_original_discriminator_checkpoint.py \\
+    --language_code ful \\
+    --pytorch_dump_folder_path /content/mms-tts-ful-with-discriminator \\
     --push_to_hub bonopassale/mms-tts-ful-with-discriminator"""
+))
+
+cells.append(nbf.v4.new_markdown_cell(
+"### Correctif de compatibilité\\n\\n"
+"`run_vits_finetuning.py` importe `send_example_telemetry`, une fonction "
+"retirée des versions récentes de Transformers (c'était juste de la "
+"télémétrie interne, non essentielle à l'entraînement). On neutralise "
+"l'import pour ne plus dépendre de la version exacte de Transformers "
+"installée."
+))
+cells.append(nbf.v4.new_code_cell(
+"""path = "/content/finetune-hf-vits/run_vits_finetuning.py"
+
+with open(path, "r", encoding="utf-8") as f:
+    content = f.read()
+
+old_import = "from transformers.utils import send_example_telemetry"
+patched_import = (
+    "try:\\n"
+    "    from transformers.utils import send_example_telemetry\\n"
+    "except ImportError:\\n"
+    "    def send_example_telemetry(*args, **kwargs):\\n"
+    "        pass"
+)
+
+if old_import in content:
+    content = content.replace(old_import, patched_import)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print("Import corrige avec succes.")
+else:
+    print("Import deja corrige ou introuvable tel quel (rien a faire).")"""
 ))
 
 cells.append(nbf.v4.new_markdown_cell(
@@ -107,7 +156,7 @@ cells.append(nbf.v4.new_markdown_cell(
 "20 à 60 minutes sur un GPU T4."
 ))
 cells.append(nbf.v4.new_code_cell(
-"""!accelerate launch /content/finetune-hf-vits/run_vits_finetuning.py \\\\
+"""!accelerate launch /content/finetune-hf-vits/run_vits_finetuning.py \\
     /content/fuv-tts-vits/training_config/finetune_fuv.json"""
 ))
 
