@@ -14,9 +14,19 @@ Usage :
 import json
 import os
 
+import soundfile as sf
 from datasets import Audio, Dataset
 
 from config import data_config, hub_config
+
+
+def _is_decodable(path: str) -> bool:
+    """Verifie que le fichier audio est reellement lisible et non vide."""
+    try:
+        data, sr = sf.read(path)
+    except Exception:
+        return False
+    return len(data) > 0
 
 
 def load_clean_records() -> list:
@@ -32,10 +42,28 @@ def load_clean_records() -> list:
         records = json.load(f)
 
     valid = []
+    bad_files = []
+
     for rec in records:
         full_path = os.path.join(audio_dir, rec["file_name"])
-        if os.path.isfile(full_path):
-            valid.append({"audio": full_path, "text": rec["text"]})
+        if not os.path.isfile(full_path):
+            bad_files.append((rec["file_name"], "fichier introuvable"))
+            continue
+        if not _is_decodable(full_path):
+            bad_files.append((rec["file_name"], "illisible ou vide"))
+            continue
+        valid.append({"audio": full_path, "text": rec["text"]})
+
+    if bad_files:
+        print(f"[!] {len(bad_files)} fichier(s) exclu(s) du dataset (corrompus ou vides) :")
+        for fname, reason in bad_files[:20]:
+            print(f"    - {fname} ({reason})")
+        if len(bad_files) > 20:
+            print(f"    ... et {len(bad_files) - 20} autres")
+        print(
+            "    -> Ces fichiers ne seront PAS publies. Verifie/re-enregistre-les "
+            "si tu veux les recuperer plus tard."
+        )
 
     if not valid:
         raise RuntimeError("Aucun enregistrement valide trouve dans le dataset nettoye.")
